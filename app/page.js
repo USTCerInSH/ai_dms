@@ -158,11 +158,11 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100">
       {/* 顶部导航栏 */}
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-white" />
               </div>
               <h1 className="text-xl font-bold text-gray-900">TuringQuant</h1>
             </div>
@@ -172,10 +172,10 @@ export default function Home() {
                 type="text"
                 value={stockCode}
                 onChange={(e) => setStockCode(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="股票代码"
               />
-              <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+              <button className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
                 <Search className="w-5 h-5" />
               </button>
             </form>
@@ -189,21 +189,21 @@ export default function Home() {
           {/* 左侧导航栏 */}
           <nav className="w-48 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm p-4">
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {menuItems.map((item) => {
                   const Icon = item.icon
                   return (
                     <li key={item.id}>
                       <button
                         onClick={() => setActiveMenu(item.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                        className={`w-full flex items-center gap-4 px-5 py-4 rounded-lg text-left transition-colors ${
                           activeMenu === item.id
                             ? 'bg-purple-50 text-purple-700'
                             : 'text-gray-600 hover:bg-gray-50'
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
-                        <span className="font-medium">{item.name}</span>
+                        <Icon className="w-6 h-6" />
+                        <span className="font-medium text-base">{item.name}</span>
                       </button>
                     </li>
                   )
@@ -227,8 +227,8 @@ export default function Home() {
       </div>
 
       {/* 页脚 */}
-      <footer className="border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 py-4 text-center text-gray-500 text-sm">
+      <footer className="border-t border-gray-200 mt-24">
+        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-sm">
           TuringQuant © 2026 - 数据仅供参考，不构成投资建议
         </div>
       </footer>
