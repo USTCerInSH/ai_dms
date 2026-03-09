@@ -7,24 +7,41 @@
 - 📊 实时股票行情展示
 - 📈 30 日价格走势图（含 MA5 均线）
 - 🎯 智能买卖信号分析
+- 📉 **MACD 多周期分析**（15 分钟/60 分钟/日线/周线）
+- 🔀 **金叉/死叉信号检测**
+- 🌅 **早盘涨跌比例监控**（开盘时 vs 开盘 15 分钟后）
 - 💡 技术面解读（支撑/阻力/趋势）
 - ⚡ 波动率分析
 - 🎨 现代化 UI 设计
 
-## 快速部署到 Vercel
+## 快速部署
 
-### 方法一：GitHub + Vercel（推荐）
+### 双平台部署 (Gitee + GitHub)
 
-1. **创建 GitHub 仓库**
-   ```bash
-   cd turingquant
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin <你的仓库地址>
-   git push -u origin main
-   ```
+详细部署指南请查看 [DEPLOY_GITEE.md](./DEPLOY_GITEE.md)
+
+```bash
+# 初始化仓库
+cd turingquant
+git init
+git add .
+git commit -m "Initial commit - TuringQuant 量化分析平台"
+git branch -M main
+
+# 添加双远程仓库
+git remote add github https://github.com/你的用户名/turingquant.git
+git remote add gitee https://gitee.com/你的用户名/turingquant.git
+
+# 推送到双平台
+git push -u github main
+git push -u gitee main
+```
+
+### 部署到 Vercel
+
+#### 方法一：GitHub + Vercel（推荐）
+
+1. **创建 GitHub 仓库**（见上方双平台部署）
 
 2. **部署到 Vercel**
    - 访问 https://vercel.com
