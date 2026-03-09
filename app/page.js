@@ -105,7 +105,7 @@ function detectCrossovers(macdData) {
   return signals
 }
 
-// 模拟早盘涨跌数据
+// 模拟早盘涨跌数据 - 多时间点
 function generateMarketData() {
   const indices = [
     { name: '上证指数', code: '000001', base: 3400 },
@@ -116,21 +116,24 @@ function generateMarketData() {
   ]
 
   return indices.map(idx => {
-    const openChange = (Math.random() - 0.45) * 2 // 开盘涨跌
-    const currentChange = (Math.random() - 0.45) * 2 // 当前涨跌
-    const advanceOpen = Math.floor(40 + Math.random() * 30) // 开盘上涨家数%
-    const advanceCurrent = Math.floor(40 + Math.random() * 30) // 当前上涨家数%
+    // 生成 4 个时间点的数据
+    const timePoints = ['open', 't945', 't1000', 't1030']
+    const timeData = {}
+    
+    timePoints.forEach((time, i) => {
+      const baseChange = (Math.random() - 0.45) * 2
+      const advance = Math.floor(35 + Math.random() * 35)
+      timeData[time] = {
+        changePercent: parseFloat(baseChange.toFixed(2)),
+        advance,
+        decline: 100 - advance,
+      }
+    })
     
     return {
       ...idx,
-      openPrice: idx.base * (1 + openChange / 100),
-      currentPrice: idx.base * (1 + currentChange / 100),
-      openChangePercent: parseFloat(openChange.toFixed(2)),
-      currentChangePercent: parseFloat(currentChange.toFixed(2)),
-      advanceOpen,
-      declineOpen: 100 - advanceOpen,
-      advanceCurrent,
-      declineCurrent: 100 - advanceCurrent,
+      timeData,
+      currentChangePercent: timeData['t1030'].changePercent,
     }
   })
 }
@@ -419,102 +422,121 @@ export default function Home() {
         )
 
       case 'market':
+        const timeLabels = {
+          'open': '开盘时',
+          't945': '9:45',
+          't1000': '10:00',
+          't1030': '10:30',
+        }
         return (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">早盘涨跌比例监控</h3>
-              <p className="text-gray-600 text-sm mb-4">数据更新时间：{new Date().toLocaleTimeString('zh-CN')}</p>
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm overflow-x-auto">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900">早盘涨跌比例监控</h3>
+                <p className="text-gray-500 text-sm">更新时间：{new Date().toLocaleTimeString('zh-CN')}</p>
+              </div>
               
-              <div className="space-y-4">
-                {marketData
-                  .filter(idx => selectedIndices.includes(idx.name))
-                  .map((idx) => (
-                  <div key={idx.code} className="border border-gray-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{idx.name}</h4>
-                        <p className="text-sm text-gray-500">{idx.code}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">{idx.currentPrice.toFixed(2)}</p>
-                        <p className={`text-sm ${idx.currentChangePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {idx.currentChangePercent > 0 ? '+' : ''}{idx.currentChangePercent}%
-                        </p>
-                      </div>
-                    </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-700 sticky left-0 bg-white">指数</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">开盘时</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">9:45</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">10:00</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">10:30</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-700">涨跌变化</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {marketData
+                    .filter(idx => selectedIndices.includes(idx.name))
+                    .map((idx) => {
+                    const openAdvance = idx.timeData['open'].advance
+                    const closeAdvance = idx.timeData['t1030'].advance
+                    const change = closeAdvance - openAdvance
+                    return (
+                      <tr key={idx.code} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-2 sticky left-0 bg-white">
+                          <div className="font-medium text-gray-900">{idx.name}</div>
+                          <div className="text-xs text-gray-500">{idx.code}</div>
+                        </td>
+                        {Object.entries(idx.timeData).map(([time, data]) => (
+                          <td key={time} className="py-3 px-2 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="text-green-600 font-medium">{data.advance}</span>
+                              <span className="text-gray-400">/</span>
+                              <span className="text-red-600 font-medium">{data.decline}</span>
+                            </div>
+                          </td>
+                        ))}
+                        <td className="py-3 px-2 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            change >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                            {change >= 0 ? '+' : ''}{change}%
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                    {/* 涨跌家数对比 */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 mb-1">开盘时</p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <ArrowUp className="w-4 h-4 text-green-600" />
-                            <span className="text-green-700 font-medium">{idx.advanceOpen}%</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <ArrowDown className="w-4 h-4 text-red-600" />
-                            <span className="text-red-700 font-medium">{idx.declineOpen}%</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-purple-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 mb-1">开盘 15 分钟后</p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <ArrowUp className="w-4 h-4 text-green-600" />
-                            <span className="text-green-700 font-medium">{idx.advanceCurrent}%</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <ArrowDown className="w-4 h-4 text-red-600" />
-                            <span className="text-red-700 font-medium">{idx.declineCurrent}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 变化趋势 */}
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-gray-500">上涨家数变化:</span>
-                      <span className={`font-medium ${
-                        idx.advanceCurrent - idx.advanceOpen >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {idx.advanceCurrent - idx.advanceOpen >= 0 ? '+' : ''}{idx.advanceCurrent - idx.advanceOpen}%
-                      </span>
-                    </div>
-                  </div>
+            {/* 指数选择 */}
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <h4 className="font-medium text-gray-900 mb-3">显示指数</h4>
+              <div className="flex flex-wrap gap-2">
+                {['上证指数', '深证成指', '创业板指', '科创 50', '沪深 300'].map(idx => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedIndices(prev =>
+                        prev.includes(idx)
+                          ? prev.filter(i => i !== idx)
+                          : [...prev, idx]
+                      )
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      selectedIndices.includes(idx)
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {idx}
+                  </button>
                 ))}
               </div>
             </div>
 
             {/* 市场情绪概览 */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h4 className="font-medium text-gray-900 mb-3">市场情绪概览</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-green-50 rounded-xl">
-                  <p className="text-2xl font-bold text-green-600">
-                    {Math.round(marketData.reduce((sum, idx) => sum + idx.advanceCurrent, 0) / marketData.length)}%
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <h4 className="font-medium text-gray-900 mb-3">市场情绪</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <p className="text-xl font-bold text-green-600">
+                    {Math.round(marketData.reduce((sum, idx) => sum + idx.timeData['t1030'].advance, 0) / marketData.length)}%
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">平均上涨比例</p>
+                  <p className="text-xs text-gray-600 mt-1">平均上涨</p>
                 </div>
-                <div className="text-center p-4 bg-red-50 rounded-xl">
-                  <p className="text-2xl font-bold text-red-600">
-                    {Math.round(marketData.reduce((sum, idx) => sum + idx.declineCurrent, 0) / marketData.length)}%
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <p className="text-xl font-bold text-red-600">
+                    {Math.round(marketData.reduce((sum, idx) => sum + idx.timeData['t1030'].decline, 0) / marketData.length)}%
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">平均下跌比例</p>
+                  <p className="text-xs text-gray-600 mt-1">平均下跌</p>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-xl">
-                  <p className="text-2xl font-bold text-purple-600">
-                    {marketData.filter(idx => idx.currentChangePercent > 0).length}
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <p className="text-xl font-bold text-purple-600">
+                    {marketData.filter(idx => idx.timeData['t1030'].changePercent > 0).length}
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">收涨指数</p>
+                  <p className="text-xs text-gray-600 mt-1">收涨指数</p>
                 </div>
-                <div className="text-center p-4 bg-gray-50 rounded-xl">
-                  <p className="text-2xl font-bold text-gray-600">
-                    {marketData.length}
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xl font-bold text-gray-600">
+                    {marketData.filter(idx => selectedIndices.includes(idx.name)).length}
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">监控指数</p>
+                  <p className="text-xs text-gray-600 mt-1">当前显示</p>
                 </div>
               </div>
             </div>
