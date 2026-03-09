@@ -11,13 +11,20 @@ git commit -m "Initial commit - TuringQuant 量化分析平台"
 ```
 
 ### 添加双远程仓库
+
+**注意**：先在 GitHub 和 Gitee 上创建空仓库，然后再执行以下命令。
+
 ```bash
-# 添加 GitHub 远程
+# 添加 GitHub 远程（先创建仓库）
 git remote add github https://github.com/你的用户名/turingquant.git
 
 # 添加 Gitee 远程
 git remote add gitee https://gitee.com/你的用户名/turingquant.git
 ```
+
+**当前配置**：
+- `origin` → Gitee: https://gitee.com/turingquant/ai-dms.git
+- `github` → GitHub: https://github.com/fengge82394/turingquant.git (需手动创建)
 
 ### 推送到双平台
 ```bash
