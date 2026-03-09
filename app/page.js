@@ -145,13 +145,22 @@ const menuItems = [
   { id: 'analysis', name: '深度分析', icon: Zap },
 ]
 
+// 默认指数列表
+const defaultIndices = [
+  { code: '000001', name: '上证指数' },
+  { code: '399001', name: '深证成指' },
+  { code: '399006', name: '创业板指' },
+  { code: '000688', name: '科创 50' },
+  { code: '000300', name: '沪深 300' },
+]
+
 export default function Home() {
   const [activeMenu, setActiveMenu] = useState('overview')
-  const [stockCode, setStockCode] = useState('688256')
-  const [stockName, setStockName] = useState('寒武纪')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [macdPeriod, setMacdPeriod] = useState('daily')
   const [selectedIndices, setSelectedIndices] = useState(['上证指数', '深证成指', '创业板指'])
+  const [watchlist, setWatchlist] = useState(defaultIndices)
+  const [customCode, setCustomCode] = useState('')
   
   const data = generateData()
   const macdData = calculateMACD(data)
@@ -163,10 +172,26 @@ export default function Home() {
 
   // 多周期配置
   const periodConfig = {
+    '5min': { name: '5 分钟', days: 1 },
     '15min': { name: '15 分钟', days: 2 },
+    '30min': { name: '30 分钟', days: 3 },
     '60min': { name: '60 分钟', days: 5 },
     'daily': { name: '日线', days: 30 },
     'weekly': { name: '周线', days: 90 },
+  }
+
+  // 添加自定义股票到自选栏
+  function addStockToWatchlist() {
+    if (customCode.trim()) {
+      const newStock = { code: customCode.trim(), name: '自定义' }
+      setWatchlist(prev => [...prev, newStock])
+      setCustomCode('')
+    }
+  }
+
+  // 从自选栏移除
+  function removeStockFromWatchlist(code) {
+    setWatchlist(prev => prev.filter(s => s.code !== code))
   }
 
   // 渲染不同功能模块
@@ -254,21 +279,18 @@ export default function Home() {
               <h4 className="font-medium text-gray-900 mb-3">最近 MACD 信号</h4>
               <div className="space-y-2">
                 {crossovers.slice(-5).reverse().map((signal, idx) => (
-                  <div key={idx} className={`flex items-center justify-between p-3 rounded-lg ${
+                  <div key={idx} className={`flex items-center gap-2 p-3 rounded-lg ${
                     signal.type === 'golden' ? 'bg-green-50' : 'bg-red-50'
                   }`}>
-                    <div className="flex items-center gap-2">
-                      {signal.type === 'golden' ? (
-                        <ArrowUp className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <ArrowDown className="w-5 h-5 text-red-600" />
-                      )}
-                      <span className={signal.type === 'golden' ? 'text-green-700' : 'text-red-700'}>
-                        {signal.type === 'golden' ? '金叉' : '死叉'}
-                      </span>
-                    </div>
+                    {signal.type === 'golden' ? (
+                      <ArrowUp className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <ArrowDown className="w-5 h-5 text-red-600" />
+                    )}
+                    <span className={signal.type === 'golden' ? 'text-green-700' : 'text-red-700'}>
+                      {signal.type === 'golden' ? '金叉信号' : '死叉信号'}
+                    </span>
                     <span className="text-gray-600 text-sm">{signal.date}</span>
-                    <span className="text-gray-900 font-medium">¥{signal.price.toFixed(2)}</span>
                   </div>
                 ))}
                 {crossovers.length === 0 && (
@@ -368,27 +390,24 @@ export default function Home() {
               <h4 className="font-medium text-gray-900 mb-3">金叉/死叉信号</h4>
               <div className="space-y-2">
                 {crossovers.slice(-10).reverse().map((signal, idx) => (
-                  <div key={idx} className={`flex items-center justify-between p-3 rounded-lg ${
+                  <div key={idx} className={`flex items-center gap-3 p-3 rounded-lg ${
                     signal.type === 'golden' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
                   }`}>
-                    <div className="flex items-center gap-3">
-                      {signal.type === 'golden' ? (
-                        <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
-                          <ArrowUp className="w-5 h-5 text-white" />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center">
-                          <ArrowDown className="w-5 h-5 text-white" />
-                        </div>
-                      )}
-                      <div>
-                        <p className={`font-medium ${signal.type === 'golden' ? 'text-green-700' : 'text-red-700'}`}>
-                          {signal.type === 'golden' ? '金叉买入' : '死叉卖出'}
-                        </p>
-                        <p className="text-sm text-gray-500">{signal.date}</p>
+                    {signal.type === 'golden' ? (
+                      <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                        <ArrowUp className="w-5 h-5 text-white" />
                       </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+                        <ArrowDown className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                    <div>
+                      <p className={`font-medium ${signal.type === 'golden' ? 'text-green-700' : 'text-red-700'}`}>
+                        {signal.type === 'golden' ? '金叉买入信号' : '死叉卖出信号'}
+                      </p>
+                      <p className="text-sm text-gray-500">{signal.date}</p>
                     </div>
-                    <span className="text-gray-900 font-semibold">¥{signal.price.toFixed(2)}</span>
                   </div>
                 ))}
                 {crossovers.length === 0 && (
@@ -548,16 +567,16 @@ export default function Home() {
               <h1 className="text-xl font-bold text-gray-900 hidden sm:block">TuringQuant</h1>
             </div>
 
-            {/* 桌面端搜索框 */}
-            <form onSubmit={(e) => { e.preventDefault(); }} className="hidden md:flex gap-2">
+            {/* 桌面端添加股票框 */}
+            <form onSubmit={(e) => { e.preventDefault(); addStockToWatchlist(); }} className="hidden md:flex gap-2">
               <input
                 type="text"
-                value={stockCode}
-                onChange={(e) => setStockCode(e.target.value)}
+                value={customCode}
+                onChange={(e) => setCustomCode(e.target.value)}
                 className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="股票代码"
+                placeholder="添加股票/指数代码"
               />
-              <button className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+              <button type="submit" className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
                 <Search className="w-5 h-5" />
               </button>
             </form>
@@ -571,16 +590,16 @@ export default function Home() {
             </button>
           </div>
 
-          {/* 移动端搜索框 */}
-          <form onSubmit={(e) => { e.preventDefault(); }} className="md:hidden mt-4 flex gap-2">
+          {/* 移动端添加股票框 */}
+          <form onSubmit={(e) => { e.preventDefault(); addStockToWatchlist(); }} className="md:hidden mt-4 flex gap-2">
             <input
               type="text"
-              value={stockCode}
-              onChange={(e) => setStockCode(e.target.value)}
+              value={customCode}
+              onChange={(e) => setCustomCode(e.target.value)}
               className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="股票代码"
+              placeholder="添加股票/指数代码"
             />
-            <button className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+            <button type="submit" className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
               <Search className="w-5 h-5" />
             </button>
           </form>
@@ -614,11 +633,40 @@ export default function Home() {
                 })}
               </ul>
 
-              {/* 股票信息卡片 */}
+              {/* 自选栏设置 */}
               <div className="bg-white rounded-xl shadow-sm p-4 mt-4 border-t border-gray-100">
-                <p className="text-sm text-gray-500">当前股票</p>
-                <p className="text-lg font-bold text-gray-900 mt-1">{stockCode}</p>
-                <p className="text-sm text-gray-600">{stockName}</p>
+                <p className="text-sm text-gray-500 mb-2">自选指数/股票</p>
+                <div className="flex gap-1 mb-2">
+                  <input
+                    type="text"
+                    value={customCode}
+                    onChange={(e) => setCustomCode(e.target.value)}
+                    placeholder="输入代码"
+                    className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    onKeyPress={(e) => e.key === 'Enter' && addStockToWatchlist()}
+                  />
+                  <button
+                    onClick={addStockToWatchlist}
+                    className="px-2 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {watchlist.map((stock) => (
+                    <div key={stock.code} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700">{stock.code} - {stock.name}</span>
+                      {stock.code !== '000001' && (
+                        <button
+                          onClick={() => removeStockFromWatchlist(stock.code)}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </nav>
@@ -656,9 +704,38 @@ export default function Home() {
                   </ul>
                 </nav>
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-                  <p className="text-sm text-gray-500">当前股票</p>
-                  <p className="text-lg font-bold text-gray-900">{stockCode}</p>
-                  <p className="text-sm text-gray-600">{stockName}</p>
+                  <p className="text-sm text-gray-500 mb-2">自选指数/股票</p>
+                  <div className="flex gap-1 mb-2">
+                    <input
+                      type="text"
+                      value={customCode}
+                      onChange={(e) => setCustomCode(e.target.value)}
+                      placeholder="输入代码"
+                      className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addStockToWatchlist()}
+                    />
+                    <button
+                      onClick={addStockToWatchlist}
+                      className="px-2 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto text-sm">
+                    {watchlist.map((stock) => (
+                      <div key={stock.code} className="flex items-center justify-between">
+                        <span className="text-gray-700">{stock.code}</span>
+                        {stock.code !== '000001' && (
+                          <button
+                            onClick={() => removeStockFromWatchlist(stock.code)}
+                            className="text-red-500 hover:text-red-700 text-xs"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
