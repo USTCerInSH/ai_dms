@@ -4,6 +4,23 @@ import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { Search, TrendingUp, Activity, Target, Zap, Menu, X, ArrowUp, ArrowDown } from 'lucide-react'
 
+// TuringQuant Logo 组件
+function TuringQuantLogo({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="tqGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7c3aed" />
+          <stop offset="100%" stopColor="#ec4899" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="8" fill="url(#tqGradient)" />
+      <text x="20" y="18" textAnchor="middle" fill="white" fontSize="9" fontWeight="700" fontFamily="monospace" letterSpacing="0.5">TURING</text>
+      <text x="20" y="30" textAnchor="middle" fill="white" fontSize="9" fontWeight="700" fontFamily="monospace" letterSpacing="0.5">QUANT</text>
+    </svg>
+  )
+}
+
 // 模拟股票数据
 function generateData(days = 30) {
   const data = []
@@ -76,6 +93,43 @@ function calculateMACD(data, shortPeriod = 12, longPeriod = 26, signalPeriod = 9
   return macdData
 }
 
+// 计算 Boll 带指标
+function calculateBollingerBands(data, period = 20, stdDev = 2) {
+  if (data.length < period) return []
+
+  const bollData = []
+
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      bollData.push({
+        ...data[i],
+        upper: 0,
+        middle: 0,
+        lower: 0,
+      })
+      continue
+    }
+
+    // 计算移动平均
+    const slice = data.slice(i - period + 1, i + 1)
+    const prices = slice.map(d => d.close)
+    const middle = prices.reduce((a, b) => a + b, 0) / period
+
+    // 计算标准差
+    const variance = prices.reduce((sum, p) => sum + Math.pow(p - middle, 2), 0) / period
+    const std = Math.sqrt(variance)
+
+    bollData.push({
+      ...data[i],
+      upper: parseFloat((middle + stdDev * std).toFixed(2)),
+      middle: parseFloat(middle.toFixed(2)),
+      lower: parseFloat((middle - stdDev * std).toFixed(2)),
+    })
+  }
+
+  return bollData
+}
+
 // 检测金叉死叉
 function detectCrossovers(macdData) {
   const signals = []
@@ -113,6 +167,9 @@ function generateMarketData() {
     { name: '创业板指', code: '399006', base: 2200 },
     { name: '科创 50', code: '000688', base: 1000 },
     { name: '沪深 300', code: '000300', base: 4000 },
+    { name: '中证 500', code: '000905', base: 5800 },
+    { name: '中证 1000', code: '000852', base: 6200 },
+    { name: '中证 2000', code: '932000', base: 1800 },
   ]
 
   return indices.map(idx => {
@@ -141,7 +198,7 @@ function generateMarketData() {
 // 菜单配置
 const menuItems = [
   { id: 'overview', name: '行情概览', icon: Activity },
-  { id: 'chart', name: 'K 线分析', icon: TrendingUp },
+  { id: 'chart', name: '行情分析', icon: TrendingUp },
   { id: 'signal', name: '智能信号', icon: Target },
   { id: 'macd', name: 'MACD 分析', icon: TrendingUp },
   { id: 'market', name: '早盘监控', icon: Zap },
@@ -155,18 +212,23 @@ const defaultIndices = [
   { code: '399006', name: '创业板指' },
   { code: '000688', name: '科创 50' },
   { code: '000300', name: '沪深 300' },
+  { code: '000905', name: '中证 500' },
+  { code: '000852', name: '中证 1000' },
+  { code: '932000', name: '中证 2000' },
 ]
 
 export default function Home() {
   const [activeMenu, setActiveMenu] = useState('overview')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [macdPeriod, setMacdPeriod] = useState('daily')
-  const [selectedIndices, setSelectedIndices] = useState(['上证指数', '深证成指', '创业板指'])
+  const [selectedIndices, setSelectedIndices] = useState(['上证指数', '创业板指', '中证 500', '中证 1000', '中证 2000'])
   const [watchlist, setWatchlist] = useState(defaultIndices)
   const [customCode, setCustomCode] = useState('')
+  const [showBoll, setShowBoll] = useState(true)
   
   const data = generateData()
   const macdData = calculateMACD(data)
+  const bollData = calculateBollingerBands(data)
   const crossovers = detectCrossovers(macdData)
   const marketData = generateMarketData()
 
@@ -240,18 +302,88 @@ export default function Home() {
 
       case 'chart':
         return (
-          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">成交量分析</h3>
-            <div className="h-64 sm:h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-                  <YAxis stroke="#9ca3af" fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="volume" fill="#7c3aed" />
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="space-y-6">
+            {/* K 线和 Boll 带 */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">K 线与布林带</h3>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showBoll}
+                    onChange={(e) => setShowBoll(e.target.checked)}
+                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  显示 Boll 带
+                </label>
+              </div>
+              <div className="h-64 sm:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                    <YAxis stroke="#9ca3af" fontSize={12} domain={['auto', 'auto']} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="close" stroke="#7c3aed" strokeWidth={2} dot={false} name="收盘价" />
+                    {showBoll && (
+                      <>
+                        <Line type="monotone" dataKey="upper" stroke="#22c55e" strokeWidth={1} dot={false} strokeDasharray="3 3" name="上轨" />
+                        <Line type="monotone" dataKey="middle" stroke="#f59e0b" strokeWidth={1} dot={false} strokeDasharray="3 3" name="中轨" />
+                        <Line type="monotone" dataKey="lower" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="下轨" />
+                      </>
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 成交量 */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">成交量</h3>
+              <div className="h-48 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                    <YAxis stroke="#9ca3af" fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="volume" fill="#7c3aed" name="成交量" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* MACD */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">MACD 指标</h3>
+              <div className="h-48 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={macdData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                    <YAxis stroke="#9ca3af" fontSize={12} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="macd" stroke="#7c3aed" strokeWidth={2} dot={false} name="MACD" />
+                    <Line type="monotone" dataKey="signal" stroke="#f59e0b" strokeWidth={2} dot={false} name="信号线" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* MACD 柱状图 */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">MACD 柱状图</h3>
+              <div className="h-40 sm:h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={macdData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                    <YAxis stroke="#9ca3af" fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="histogram" fill="#7c3aed" name="MACD 柱" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )
@@ -331,7 +463,7 @@ export default function Home() {
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <h4 className="font-medium text-gray-900 mb-3">选择指数</h4>
               <div className="flex flex-wrap gap-2">
-                {['上证指数', '深证成指', '创业板指', '科创 50', '沪深 300'].map(idx => (
+                {['上证指数', '深证成指', '创业板指', '科创 50', '沪深 300', '中证 500', '中证 1000', '中证 2000'].map(idx => (
                   <button
                     key={idx}
                     onClick={() => {
@@ -488,7 +620,7 @@ export default function Home() {
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <h4 className="font-medium text-gray-900 mb-3">显示指数</h4>
               <div className="flex flex-wrap gap-2">
-                {['上证指数', '深证成指', '创业板指', '科创 50', '沪深 300'].map(idx => (
+                {['上证指数', '深证成指', '创业板指', '科创 50', '沪深 300', '中证 500', '中证 1000', '中证 2000'].map(idx => (
                   <button
                     key={idx}
                     onClick={() => {
@@ -583,10 +715,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">图灵量化智能决策系统 TuringQuant</h1>
+              <TuringQuantLogo size={40} />
+              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">图灵量化智能决策系统</h1>
             </div>
 
             {/* 桌面端添加股票框 */}
@@ -773,7 +903,7 @@ export default function Home() {
       {/* 页脚 */}
       <footer className="border-t border-gray-200 mt-24">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-sm">
-          <p>图灵量化智能决策系统 TuringQuant © 2026</p>
+          <p>图灵量化智能决策系统 © 2026</p>
           <p className="mt-2">数据仅供参考，不构成投资建议</p>
         </div>
       </footer>
