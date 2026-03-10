@@ -586,7 +586,7 @@ export default function Home() {
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">TuringQuant</h1>
+              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">图灵量化智能决策系统 TuringQuant</h1>
             </div>
 
             {/* 桌面端添加股票框 */}
@@ -773,7 +773,7 @@ export default function Home() {
       {/* 页脚 */}
       <footer className="border-t border-gray-200 mt-24">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-sm">
-          <p>TuringQuant © 2026</p>
+          <p>图灵量化智能决策系统 TuringQuant © 2026</p>
           <p className="mt-2">数据仅供参考，不构成投资建议</p>
         </div>
       </footer>
