@@ -606,7 +606,7 @@ export default function Home() {
                             change >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>
                             {change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                            {change >= 0 ? '+' : ''}{change}%
+                            {change >= 0 ? '+' : ''}{change}
                           </span>
                         </td>
                       </tr>
@@ -648,25 +648,25 @@ export default function Home() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="text-center p-3 bg-green-50 rounded-lg">
                   <p className="text-xl font-bold text-green-600">
-                    {Math.round(marketData.reduce((sum, idx) => sum + idx.timeData['t1030'].advance, 0) / marketData.length)}%
+                    {Math.round(marketData.filter(idx => selectedIndices.includes(idx.name)).reduce((sum, idx) => sum + idx.timeData['t1030'].advance, 0) / selectedIndices.length)}%
                   </p>
                   <p className="text-xs text-gray-600 mt-1">平均上涨</p>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg">
                   <p className="text-xl font-bold text-red-600">
-                    {Math.round(marketData.reduce((sum, idx) => sum + idx.timeData['t1030'].decline, 0) / marketData.length)}%
+                    {Math.round(marketData.filter(idx => selectedIndices.includes(idx.name)).reduce((sum, idx) => sum + idx.timeData['t1030'].decline, 0) / selectedIndices.length)}%
                   </p>
                   <p className="text-xs text-gray-600 mt-1">平均下跌</p>
                 </div>
                 <div className="text-center p-3 bg-purple-50 rounded-lg">
                   <p className="text-xl font-bold text-purple-600">
-                    {marketData.filter(idx => idx.timeData['t1030'].changePercent > 0).length}
+                    {marketData.filter(idx => selectedIndices.includes(idx.name) && idx.timeData['t1030'].changePercent > 0).length}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">收涨指数</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-xl font-bold text-gray-600">
-                    {marketData.filter(idx => selectedIndices.includes(idx.name)).length}
+                    {selectedIndices.length}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">当前显示</p>
                 </div>
