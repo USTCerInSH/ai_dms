@@ -725,7 +725,10 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <TuringQuantLogo size={40} />
-              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">图灵量化智能决策系统</h1>
+              <h1 className="text-xl font-bold hidden sm:block">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 font-mono tracking-wider">图灵量化</span>
+                <span className="text-gray-900 ml-1 font-sans">智能决策系统</span>
+              </h1>
             </div>
 
             {/* 桌面端添加股票框 */}
