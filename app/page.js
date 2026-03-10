@@ -159,17 +159,18 @@ function detectCrossovers(macdData) {
   return signals
 }
 
-// 模拟早盘涨跌数据 - 多时间点
+// 模拟早盘涨跌数据 - 多时间点（基于真实成分股数量）
 function generateMarketData() {
+  // 各指数真实成分股数量（约数，实际会变动）
   const indices = [
-    { name: '上证指数', code: '000001', base: 3400 },
-    { name: '深证成指', code: '399001', base: 11000 },
-    { name: '创业板指', code: '399006', base: 2200 },
-    { name: '科创 50', code: '000688', base: 1000 },
-    { name: '沪深 300', code: '000300', base: 4000 },
-    { name: '中证 500', code: '000905', base: 5800 },
-    { name: '中证 1000', code: '000852', base: 6200 },
-    { name: '中证 2000', code: '932000', base: 1800 },
+    { name: '上证指数', code: '000001', base: 3400, totalStocks: 2380 },    // 上交所全部股票
+    { name: '深证成指', code: '399001', base: 11000, totalStocks: 2850 },   // 深交所全部股票
+    { name: '创业板指', code: '399006', base: 2200, totalStocks: 1350 },    // 创业板全部
+    { name: '科创 50', code: '000688', base: 1000, totalStocks: 575 },      // 科创板全部
+    { name: '沪深 300', code: '000300', base: 4000, totalStocks: 300 },     // 沪深 300 成分股
+    { name: '中证 500', code: '000905', base: 5800, totalStocks: 500 },     // 中证 500 成分股
+    { name: '中证 1000', code: '000852', base: 6200, totalStocks: 1000 },   // 中证 1000 成分股
+    { name: '中证 2000', code: '932000', base: 1800, totalStocks: 2000 },   // 中证 2000 成分股
   ]
 
   return indices.map(idx => {
@@ -177,13 +178,21 @@ function generateMarketData() {
     const timePoints = ['open', 't945', 't1000', 't1030']
     const timeData = {}
     
+    // 生成一个基准涨跌比例，让各时间点有连贯性
+    const baseAdvanceRatio = 0.35 + Math.random() * 0.35  // 35%~70% 的上涨比例
+    
     timePoints.forEach((time, i) => {
-      const baseChange = (Math.random() - 0.45) * 2
-      const advance = Math.floor(35 + Math.random() * 35)
+      // 每个时间点略有波动，但保持趋势一致
+      const fluctuation = (Math.random() - 0.5) * 0.1  // ±5% 波动
+      const advanceRatio = Math.max(0.2, Math.min(0.8, baseAdvanceRatio + fluctuation))
+      const advance = Math.floor(idx.totalStocks * advanceRatio)
+      const decline = idx.totalStocks - advance
+      const changePercent = (advanceRatio - 0.5) * 4  // 转换为指数涨跌幅，约 -2% 到 +2%
+      
       timeData[time] = {
-        changePercent: parseFloat(baseChange.toFixed(2)),
+        changePercent: parseFloat(changePercent.toFixed(2)),
         advance,
-        decline: 100 - advance,
+        decline,
       }
     })
     
