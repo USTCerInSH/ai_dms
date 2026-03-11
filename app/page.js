@@ -257,15 +257,59 @@ export default function Home() {
   const [customCode, setCustomCode] = useState('')
   const [showBoll, setShowBoll] = useState(true)
   
-  const sseData = generateSSEData()  // 上证指数数据
-  const data = generateData()
-  const macdData = calculateMACD(sseData)  // MACD 基于上证指数
-  const bollData = calculateBollingerBands(sseData)  // 布林带基于上证指数
-  const crossovers = detectCrossovers(macdData)
+  // 真实市场数据状态
+  const [sseData, setSseData] = useState([])
+  const [sseCurrent, setSseCurrent] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState([])
+  
+  // 获取真实上证指数数据
+  useEffect(() => {
+    async function fetchMarketData() {
+      try {
+        const res = await fetch('/api/market-data', { cache: 'no-store' })
+        const result = await res.json()
+        
+        if (result.success && result.history.length > 0) {
+          // 转换数据格式以适配图表
+          const formattedData = result.history.map(d => ({
+            date: d.date,
+            open: d.open,
+            close: d.close,
+            high: d.high,
+            low: d.low,
+            volume: d.volume,
+            price: d.close,  // 兼容原有代码
+          }))
+          
+          setSseData(formattedData)
+          setSseCurrent(result.current)
+          setData(formattedData)  // 也设置 data 用于其他图表
+        }
+      } catch (error) {
+        console.error('Failed to fetch market data:', error)
+        // 降级到模拟数据
+        const fallbackData = generateSSEData()
+        setSseData(fallbackData)
+        setData(fallbackData)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchMarketData()
+  }, [])
+  
+  // 计算 MACD 和 Bollinger Bands（基于真实数据）
+  const macdData = sseData.length > 0 ? calculateMACD(sseData) : []
+  const bollData = sseData.length > 0 ? calculateBollingerBands(sseData) : []
+  const crossovers = sseData.length > 0 ? detectCrossovers(macdData) : []
   const marketData = generateMarketData()
 
-  const currentPrice = sseData[sseData.length - 1].price  // 使用上证指数价格
-  const changePercent = ((currentPrice - sseData[0].price) / sseData[0].price * 100).toFixed(2)
+  // 当前价格和涨跌幅
+  const currentPrice = sseCurrent?.current || (sseData.length > 0 ? sseData[sseData.length - 1].close : 3400)
+  const prevClose = sseCurrent?.prevClose || (sseData.length > 0 ? sseData[sseData.length - 2]?.close : 3400)
+  const changePercent = sseCurrent ? ((currentPrice - prevClose) / prevClose * 100).toFixed(2) : '0.00'
 
   // 多周期配置
   const periodConfig = {
@@ -295,6 +339,21 @@ export default function Home() {
   function renderContent() {
     switch (activeMenu) {
       case 'overview':
+        if (loading) {
+          return (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600">🐰 蹦财兔正在获取真实行情数据...</p>
+              </div>
+            </div>
+          )
+        }
+
+        const latestData = sseData.length > 0 ? sseData[sseData.length - 1] : null
+        const maxHigh = sseData.length > 0 ? Math.max(...sseData.map(d => d.high)) : 0
+        const minLow = sseData.length > 0 ? Math.min(...sseData.map(d => d.low)) : 0
+
         return (
           <div className="space-y-6">
             {/* 上证指数核心指标 */}
@@ -302,17 +361,22 @@ export default function Home() {
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <p className="text-gray-500 text-sm">上证指数</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{currentPrice.toFixed(2)}</p>
-                <p className={`text-sm mt-2 ${changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {changePercent > 0 ? '+' : ''}{changePercent}%
+                <p className={`text-sm mt-2 ${parseFloat(changePercent) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {parseFloat(changePercent) > 0 ? '+' : ''}{changePercent}%
                 </p>
+                {sseCurrent && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    {sseCurrent.date} {sseCurrent.time}
+                  </p>
+                )}
               </div>
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <p className="text-gray-500 text-sm">30 日最高</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{Math.max(...sseData.map(d => d.high)).toFixed(2)}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{maxHigh.toFixed(2)}</p>
               </div>
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <p className="text-gray-500 text-sm">30 日最低</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{Math.min(...sseData.map(d => d.low)).toFixed(2)}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{minLow.toFixed(2)}</p>
               </div>
             </div>
 
@@ -325,19 +389,19 @@ export default function Home() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">开盘价</span>
-                      <span className="font-medium text-gray-900">{sseData[sseData.length - 1].open.toFixed(2)}</span>
+                      <span className="font-medium text-gray-900">{latestData?.open.toFixed(2) || '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">收盘价</span>
-                      <span className="font-medium text-gray-900">{sseData[sseData.length - 1].close.toFixed(2)}</span>
+                      <span className="font-medium text-gray-900">{latestData?.close.toFixed(2) || '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">最高价</span>
-                      <span className="font-medium text-green-600">{sseData[sseData.length - 1].high.toFixed(2)}</span>
+                      <span className="font-medium text-green-600">{latestData?.high.toFixed(2) || '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">最低价</span>
-                      <span className="font-medium text-red-600">{sseData[sseData.length - 1].low.toFixed(2)}</span>
+                      <span className="font-medium text-red-600">{latestData?.low.toFixed(2) || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -345,7 +409,7 @@ export default function Home() {
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <h4 className="font-semibold text-gray-900 mb-4">成交量</h4>
                   <p className="text-2xl font-bold text-purple-600">
-                    {(sseData[sseData.length - 1].volume / 100000000).toFixed(2)} 亿
+                    {latestData ? (latestData.volume / 100000000).toFixed(2) : '-'} 亿
                   </p>
                   <p className="text-sm text-gray-500 mt-2">最新交易日</p>
                 </div>
@@ -353,7 +417,7 @@ export default function Home() {
                 <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 shadow-sm border border-purple-100">
                   <h4 className="font-semibold text-purple-900 mb-2">🐰 蹦财兔点评</h4>
                   <p className="text-purple-700 text-sm">
-                    {changePercent > 0 
+                    {parseFloat(changePercent) > 0 
                       ? '市场情绪积极，指数站稳关键点位，关注成交量是否持续放大！' 
                       : '短期调整属正常波动，逢低可关注优质标的，保持耐心！'}
                   </p>
@@ -364,24 +428,30 @@ export default function Home() {
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm h-full">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">上证指数 K 线图</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">上证指数 K 线图（真实数据）</h3>
                     <span className="text-sm text-gray-500">近 30 日走势</span>
                   </div>
-                  <div className="h-80 sm:h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={sseData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-                        <YAxis stroke="#9ca3af" fontSize={12} domain={['auto', 'auto']} />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                          labelStyle={{ color: '#374151', fontWeight: 600 }}
-                        />
-                        <Line type="monotone" dataKey="close" stroke="#7c3aed" strokeWidth={2} dot={false} name="收盘价" />
-                        <Line type="monotone" dataKey="open" stroke="#10b981" strokeWidth={1} dot={false} strokeDasharray="3 3" name="开盘价" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {sseData.length > 0 ? (
+                    <div className="h-80 sm:h-96">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={sseData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                          <YAxis stroke="#9ca3af" fontSize={12} domain={['auto', 'auto']} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                            labelStyle={{ color: '#374151', fontWeight: 600 }}
+                          />
+                          <Line type="monotone" dataKey="close" stroke="#7c3aed" strokeWidth={2} dot={false} name="收盘价" />
+                          <Line type="monotone" dataKey="open" stroke="#10b981" strokeWidth={1} dot={false} strokeDasharray="3 3" name="开盘价" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-80 sm:h-96 flex items-center justify-center text-gray-500">
+                      暂无数据
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
