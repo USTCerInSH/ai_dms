@@ -21,7 +21,29 @@ function TuringQuantLogo({ size = 40 }) {
   )
 }
 
-// 模拟股票数据
+// 模拟上证指数数据
+function generateSSEData(days = 30) {
+  const data = []
+  let price = 3400  // 上证指数基准点位
+  for (let i = days; i >= 0; i--) {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    // 模拟指数波动，幅度更符合大盘特征
+    price = price + (Math.random() - 0.5) * 40
+    data.push({
+      date: date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
+      price: parseFloat(price.toFixed(2)),
+      volume: Math.floor(Math.random() * 300000000) + 200000000,  // 指数成交量更大
+      open: price + (Math.random() - 0.5) * 15,
+      high: price + Math.random() * 25,
+      low: price - Math.random() * 25,
+      close: price,
+    })
+  }
+  return data
+}
+
+// 模拟个股股票数据
 function generateData(days = 30) {
   const data = []
   let price = 350
@@ -235,14 +257,15 @@ export default function Home() {
   const [customCode, setCustomCode] = useState('')
   const [showBoll, setShowBoll] = useState(true)
   
+  const sseData = generateSSEData()  // 上证指数数据
   const data = generateData()
-  const macdData = calculateMACD(data)
-  const bollData = calculateBollingerBands(data)
+  const macdData = calculateMACD(sseData)  // MACD 基于上证指数
+  const bollData = calculateBollingerBands(sseData)  // 布林带基于上证指数
   const crossovers = detectCrossovers(macdData)
   const marketData = generateMarketData()
 
-  const currentPrice = data[data.length - 1].price
-  const changePercent = ((currentPrice - data[0].price) / data[0].price * 100).toFixed(2)
+  const currentPrice = sseData[sseData.length - 1].price  // 使用上证指数价格
+  const changePercent = ((currentPrice - sseData[0].price) / sseData[0].price * 100).toFixed(2)
 
   // 多周期配置
   const periodConfig = {
@@ -274,36 +297,92 @@ export default function Home() {
       case 'overview':
         return (
           <div className="space-y-6">
+            {/* 上证指数核心指标 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="bg-white rounded-xl p-6 shadow-sm">
-                <p className="text-gray-500 text-sm">当前价格</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">¥{currentPrice.toFixed(2)}</p>
+                <p className="text-gray-500 text-sm">上证指数</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{currentPrice.toFixed(2)}</p>
                 <p className={`text-sm mt-2 ${changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {changePercent > 0 ? '+' : ''}{changePercent}%
                 </p>
               </div>
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <p className="text-gray-500 text-sm">30 日最高</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">¥{Math.max(...data.map(d => d.price)).toFixed(2)}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{Math.max(...sseData.map(d => d.high)).toFixed(2)}</p>
               </div>
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <p className="text-gray-500 text-sm">30 日最低</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">¥{Math.min(...data.map(d => d.price)).toFixed(2)}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{Math.min(...sseData.map(d => d.low)).toFixed(2)}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">30 日价格走势</h3>
-              <div className="h-64 sm:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-                    <YAxis stroke="#9ca3af" fontSize={12} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="price" stroke="#7c3aed" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+            {/* 行情预览 - 左侧统计，右侧 K 线图 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* 左侧：统计信息 */}
+              <div className="lg:col-span-1 space-y-4">
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 mb-4">市场概况</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">开盘价</span>
+                      <span className="font-medium text-gray-900">{sseData[sseData.length - 1].open.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">收盘价</span>
+                      <span className="font-medium text-gray-900">{sseData[sseData.length - 1].close.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">最高价</span>
+                      <span className="font-medium text-green-600">{sseData[sseData.length - 1].high.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">最低价</span>
+                      <span className="font-medium text-red-600">{sseData[sseData.length - 1].low.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 mb-4">成交量</h4>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {(sseData[sseData.length - 1].volume / 100000000).toFixed(2)} 亿
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">最新交易日</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 shadow-sm border border-purple-100">
+                  <h4 className="font-semibold text-purple-900 mb-2">🐰 蹦财兔点评</h4>
+                  <p className="text-purple-700 text-sm">
+                    {changePercent > 0 
+                      ? '市场情绪积极，指数站稳关键点位，关注成交量是否持续放大！' 
+                      : '短期调整属正常波动，逢低可关注优质标的，保持耐心！'}
+                  </p>
+                </div>
+              </div>
+
+              {/* 右侧：K 线图 */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">上证指数 K 线图</h3>
+                    <span className="text-sm text-gray-500">近 30 日走势</span>
+                  </div>
+                  <div className="h-80 sm:h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={sseData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                        <YAxis stroke="#9ca3af" fontSize={12} domain={['auto', 'auto']} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                          labelStyle={{ color: '#374151', fontWeight: 600 }}
+                        />
+                        <Line type="monotone" dataKey="close" stroke="#7c3aed" strokeWidth={2} dot={false} name="收盘价" />
+                        <Line type="monotone" dataKey="open" stroke="#10b981" strokeWidth={1} dot={false} strokeDasharray="3 3" name="开盘价" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
